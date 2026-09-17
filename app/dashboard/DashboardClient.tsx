@@ -67,8 +67,8 @@ export default function DashboardClient({ user, baseUrl }: Props) {
   };
 
   const handleCreated = (link: LinkData) => {
+    // Add to list but do NOT close modal — modal closes itself when user clicks "Done"
     setLinks((prev) => [link, ...prev]);
-    setShowCreate(false);
   };
 
   const handleDeleted = (slug: string) => {

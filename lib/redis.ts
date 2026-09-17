@@ -69,7 +69,7 @@ export async function getLink(slug: string): Promise<LinkData | null> {
 }
 
 export async function setLink(slug: string, data: LinkData): Promise<void> {
-  await redis.set(keys.link(slug), JSON.stringify(data));
+  await redis.set(keys.link(slug), data);
   if (data.userId) {
     await redis.sadd(keys.userLinks(data.userId), slug);
   }
@@ -85,7 +85,7 @@ export async function incrementClicks(slug: string): Promise<void> {
   const link = await getLink(slug);
   if (!link) return;
   link.clicks = (link.clicks || 0) + 1;
-  await redis.set(keys.link(slug), JSON.stringify(link));
+  await redis.set(keys.link(slug), link);
 }
 
 export async function trackClick(slug: string, event: ClickEvent): Promise<void> {
@@ -126,10 +126,10 @@ export async function getUserByEmail(email: string): Promise<UserData | null> {
 }
 
 export async function createUser(user: UserData): Promise<void> {
-  await redis.set(keys.user(user.id), JSON.stringify(user));
+  await redis.set(keys.user(user.id), user);
   await redis.set(keys.userEmail(user.email), user.id);
 }
 
 export async function updateUser(user: UserData): Promise<void> {
-  await redis.set(keys.user(user.id), JSON.stringify(user));
+  await redis.set(keys.user(user.id), user);
 }
