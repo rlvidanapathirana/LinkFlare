@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import LinkCard from "@/components/LinkCard";
 import CreateLinkModal from "@/components/CreateLinkModal";
+import AccountSettingsModal from "@/components/AccountSettingsModal";
 import {
   Plus, Search, Link2, BarChart2, Zap, Clock, TrendingUp,
-  Loader2, Filter, ArrowUpDown,
+  Loader2, Filter, ArrowUpDown, ShieldCheck,
 } from "lucide-react";
 
 interface LinkData {
@@ -36,9 +37,17 @@ export default function DashboardClient({ user, baseUrl }: Props) {
   const [links, setLinks] = useState<LinkData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("newest");
   const [filter, setFilter] = useState<"all" | "active" | "expired">("all");
+  const [effectiveBaseUrl, setEffectiveBaseUrl] = useState("https://shturl.netlify.app");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setEffectiveBaseUrl(window.location.origin);
+    }
+  }, []);
 
   useEffect(() => {
     fetchLinks();
@@ -120,13 +129,24 @@ export default function DashboardClient({ user, baseUrl }: Props) {
               {user.email}
             </p>
           </div>
-          <button
-            onClick={() => setShowCreate(true)}
-            id="create-link-dashboard-btn"
-            className="btn-primary gap-2 flex-shrink-0"
-          >
-            <Plus size={18} /> Create New Link
-          </button>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={() => setShowSettings(true)}
+              id="security-settings-btn"
+              className="btn-secondary gap-2 flex-shrink-0"
+              title="View Security & Download Recovery Key"
+            >
+              <ShieldCheck size={17} className="text-amber-500" />
+              <span>Recovery Key</span>
+            </button>
+            <button
+              onClick={() => setShowCreate(true)}
+              id="create-link-dashboard-btn"
+              className="btn-primary gap-2 flex-shrink-0"
+            >
+              <Plus size={18} /> Create New Link
+            </button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -235,7 +255,7 @@ export default function DashboardClient({ user, baseUrl }: Props) {
                 <LinkCard
                   key={link.slug}
                   link={link}
-                  baseUrl={baseUrl}
+                  baseUrl={effectiveBaseUrl}
                   onDeleted={handleDeleted}
                   onUpdated={handleUpdated}
                 />
@@ -252,9 +272,16 @@ export default function DashboardClient({ user, baseUrl }: Props) {
 
       {showCreate && (
         <CreateLinkModal
-          baseUrl={baseUrl}
+          baseUrl={effectiveBaseUrl}
           onClose={() => setShowCreate(false)}
           onCreated={handleCreated}
+        />
+      )}
+
+      {showSettings && (
+        <AccountSettingsModal
+          user={user}
+          onClose={() => setShowSettings(false)}
         />
       )}
     </div>

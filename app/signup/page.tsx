@@ -3,7 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Zap, Mail, Lock, Eye, EyeOff, User, AlertCircle, Loader2, ArrowRight, UserPlus, CheckCircle2 } from "lucide-react";
+import {
+  Zap, Mail, Lock, Eye, EyeOff, User, AlertCircle, Loader2,
+  ArrowRight, UserPlus, CheckCircle2, ShieldCheck, Download, Copy, Check, Key, HelpCircle
+} from "lucide-react";
+import { SECURITY_QUESTIONS } from "@/lib/redis";
 
 function getPasswordStrength(pw: string): { score: number; label: string; color: string } {
   let score = 0;
@@ -16,6 +20,12 @@ function getPasswordStrength(pw: string): { score: number; label: string; color:
   return { score, label: labels[score] || "", color: colors[score] || "" };
 }
 
+interface RecoveryData {
+  user: { id: string; email: string; name: string };
+  recoveryCode: string;
+  securityQuestion: string;
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -23,8 +33,16 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [securityQuestion, setSecurityQuestion] = useState(SECURITY_QUESTIONS[0]);
+  const [securityAnswer, setSecurityAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Post signup recovery modal state
+  const [recoveryData, setRecoveryData] = useState<RecoveryData | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(false);
 
   const strength = getPasswordStrength(password);
 
@@ -34,13 +52,20 @@ export default function SignupPage() {
 
     if (password !== confirmPassword) return setError("Passwords don't match");
     if (password.length < 8) return setError("Password must be at least 8 characters");
+    if (!securityAnswer.trim()) return setError("Please provide an answer to the security question");
 
     setLoading(true);
     try {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          securityQuestion,
+          securityAnswer: securityAnswer.trim(),
+        }),
       });
       const data = await res.json();
 
@@ -48,8 +73,11 @@ export default function SignupPage() {
         setError(data.error || "Signup failed");
       } else {
         localStorage.setItem("lf_user", JSON.stringify(data.user));
-        router.push("/dashboard");
-        router.refresh();
+        setRecoveryData({
+          user: data.user,
+          recoveryCode: data.recoveryCode,
+          securityQuestion: data.securityQuestion || securityQuestion,
+        });
       }
     } catch {
       setError("Something went wrong. Please try again.");
@@ -58,6 +86,169 @@ export default function SignupPage() {
     }
   };
 
+  const handleCopyCode = () => {
+    if (!recoveryData) return;
+    navigator.clipboard.writeText(recoveryData.recoveryCode);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const handleDownloadRecoveryKit = () => {
+    if (!recoveryData) return;
+    const content = `===================================================================
+LINKFLARE - ACCOUNT RECOVERY KEY & DETAILS
+===================================================================
+Account Name     : ${recoveryData.user.name}
+Account Email    : ${recoveryData.user.email}
+Security Question: ${recoveryData.securityQuestion}
+Recovery Key     : ${recoveryData.recoveryCode}
+Created Date     : ${new Date().toLocaleString()}
+
+===================================================================
+⚠️ IMPORTANT SECURITY WARNING:
+Keep this Recovery Key in a safe and secure place (e.g. password manager,
+printed paper, or safe drive). 
+
+If you ever forget your password, you will NEED this Recovery Key or
+your Security Question answer to reset your password and access your
+LinkFlare account.
+
+Without this Recovery Key, your account CANNOT be recovered.
+===================================================================`;
+
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `linkflare-recovery-key-${recoveryData.user.email.replace(/[^a-zA-Z0-9]/g, "_")}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setDownloaded(true);
+    setAcknowledged(true);
+  };
+
+  const handleProceedToDashboard = () => {
+    router.push("/dashboard");
+    router.refresh();
+  };
+
+  // ─── Render Recovery Kit Step ──────────────────────────────────────────────
+  if (recoveryData) {
+    return (
+      <div className="min-h-screen hero-bg flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-lg animate-scale-in">
+          <div className="glass-card p-8 border-2" style={{ borderColor: "rgba(245, 158, 11, 0.4)" }}>
+            <div className="text-center mb-6">
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mx-auto mb-3 shadow-glow">
+                <ShieldCheck size={30} className="text-amber-500" />
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black font-display" style={{ color: "var(--text)" }}>
+                Save Your Recovery Key
+              </h1>
+              <p className="mt-1.5 text-sm" style={{ color: "var(--text-secondary)" }}>
+                Your account is ready! Please save this recovery key before continuing.
+              </p>
+            </div>
+
+            {/* Warning Alert */}
+            <div
+              className="p-4 rounded-xl mb-6 text-xs sm:text-sm leading-relaxed border"
+              style={{
+                background: "rgba(245, 158, 11, 0.08)",
+                borderColor: "rgba(245, 158, 11, 0.3)",
+                color: "var(--text)",
+              }}
+            >
+              <div className="flex items-start gap-2.5">
+                <AlertCircle size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-amber-500 font-semibold block mb-0.5">Keep this file safe!</strong>
+                  If you ever forget your password, you will <strong>NEED</strong> this Recovery Key to reset your password. Without this key or your security question answer, your account <strong>cannot be recovered</strong>.
+                </div>
+              </div>
+            </div>
+
+            {/* Recovery Code Display */}
+            <div className="mb-6">
+              <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
+                Your Master Recovery Key
+              </label>
+              <div
+                className="flex items-center justify-between p-3.5 rounded-xl border font-mono font-bold text-base sm:text-lg tracking-wider"
+                style={{
+                  background: "var(--surface-2)",
+                  borderColor: "var(--border)",
+                  color: "var(--accent)",
+                }}
+              >
+                <span className="select-all truncate">{recoveryData.recoveryCode}</span>
+                <button
+                  type="button"
+                  onClick={handleCopyCode}
+                  className="btn-ghost p-2 rounded-lg flex-shrink-0 ml-2"
+                  title="Copy Recovery Key"
+                >
+                  {copiedCode ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Download Button */}
+            <div className="space-y-4">
+              <button
+                type="button"
+                onClick={handleDownloadRecoveryKit}
+                className="w-full py-3.5 px-4 rounded-xl font-bold flex items-center justify-center gap-2 text-sm sm:text-base transition-all duration-300 shadow-md hover:scale-[1.02] active:scale-[0.98]"
+                style={{
+                  background: downloaded ? "var(--surface-2)" : "linear-gradient(135deg, #FFDD00 0%, #F59E0B 100%)",
+                  color: downloaded ? "var(--text)" : "#000000",
+                  border: downloaded ? "1px solid var(--border)" : "none",
+                }}
+              >
+                {downloaded ? (
+                  <>
+                    <CheckCircle2 size={18} className="text-emerald-500" />
+                    <span>Recovery Kit Downloaded (.txt)</span>
+                  </>
+                ) : (
+                  <>
+                    <Download size={18} />
+                    <span>Download Recovery Kit (.txt)</span>
+                  </>
+                )}
+              </button>
+
+              {/* Acknowledgment Checkbox */}
+              <label className="flex items-start gap-2.5 text-xs cursor-pointer select-none px-1" style={{ color: "var(--text-secondary)" }}>
+                <input
+                  type="checkbox"
+                  checked={acknowledged}
+                  onChange={(e) => setAcknowledged(e.target.checked)}
+                  className="mt-0.5 rounded accent-indigo-500 w-4 h-4 cursor-pointer"
+                />
+                <span>I have downloaded and stored my Recovery Key in a safe place.</span>
+              </label>
+
+              {/* Continue to Dashboard */}
+              <button
+                type="button"
+                onClick={handleProceedToDashboard}
+                disabled={!acknowledged && !downloaded}
+                className="btn-primary w-full py-3.5 text-base flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span>Continue to Dashboard</span>
+                <ArrowRight size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Standard Signup Form ──────────────────────────────────────────────────
   return (
     <div className="min-h-screen hero-bg flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
@@ -71,7 +262,7 @@ export default function SignupPage() {
           </Link>
           <h1 className="text-3xl font-black font-display" style={{ color: "var(--text)" }}>Create Account</h1>
           <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-            Free forever. No credit card required.
+            Free forever. With self-custodial account recovery.
           </p>
         </div>
 
@@ -184,16 +375,61 @@ export default function SignupPage() {
               </div>
             </div>
 
+            {/* Account Recovery Section */}
+            <div className="pt-2 border-t" style={{ borderColor: "var(--border)" }}>
+              <div className="flex items-center gap-1.5 mb-2">
+                <HelpCircle size={15} style={{ color: "var(--accent)" }} />
+                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--accent)" }}>
+                  Account Recovery Setup
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
+                    Security Question
+                  </label>
+                  <select
+                    value={securityQuestion}
+                    onChange={(e) => setSecurityQuestion(e.target.value)}
+                    className="input-field text-xs sm:text-sm py-2.5 cursor-pointer"
+                  >
+                    {SECURITY_QUESTIONS.map((q, i) => (
+                      <option key={i} value={q}>{q}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
+                    Answer to Security Question
+                  </label>
+                  <input
+                    type="text"
+                    id="signup-security-answer"
+                    placeholder="Your secret answer"
+                    value={securityAnswer}
+                    onChange={(e) => setSecurityAnswer(e.target.value)}
+                    className="input-field text-sm py-2.5"
+                    required
+                  />
+                  <p className="text-[11px] mt-1" style={{ color: "var(--text-muted)" }}>
+                    Used along with your Recovery Key if you ever forget your password.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
               id="signup-submit-btn"
-              className="btn-primary w-full py-3 text-base mt-2"
+              className="btn-primary w-full py-3.5 text-base mt-3"
             >
               {loading ? (
                 <><Loader2 size={18} className="animate-spin" /> Creating Account…</>
               ) : (
-                <><UserPlus size={18} /> Create Free Account</>
+                <><UserPlus size={18} /> Create Account & Get Recovery Key</>
               )}
             </button>
           </form>

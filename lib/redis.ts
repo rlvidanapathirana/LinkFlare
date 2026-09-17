@@ -26,7 +26,19 @@ export interface UserData {
   name: string;
   passwordHash: string;
   createdAt: string;
+  securityQuestion?: string;
+  securityAnswerHash?: string;
+  recoveryCodeHash?: string; // bcrypt hash of recovery code
 }
+
+export const SECURITY_QUESTIONS = [
+  "What was the name of your first school?",
+  "In which city or town were you born?",
+  "What was your childhood nickname?",
+  "What is your favorite book, movie, or song?",
+  "What was the name of your first pet?",
+  "What is your mother's maiden name?",
+];
 
 export interface ClickEvent {
   timestamp: string;
@@ -116,4 +128,8 @@ export async function getUserByEmail(email: string): Promise<UserData | null> {
 export async function createUser(user: UserData): Promise<void> {
   await redis.set(keys.user(user.id), JSON.stringify(user));
   await redis.set(keys.userEmail(user.email), user.id);
+}
+
+export async function updateUser(user: UserData): Promise<void> {
+  await redis.set(keys.user(user.id), JSON.stringify(user));
 }

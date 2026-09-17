@@ -65,11 +65,19 @@ export default function CreateLinkModal({ onClose, onCreated, baseUrl }: Props) 
     }, 500);
   }, [customSlug, prefix]);
 
+  const [displayBaseUrl, setDisplayBaseUrl] = useState("https://shturl.netlify.app");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setDisplayBaseUrl(window.location.origin);
+    }
+  }, []);
+
   const shortUrlPreview = created
     ? created.shortUrl
     : customSlug
-    ? `${baseUrl}/${prefix}${customSlug}`
-    : `${baseUrl}/${prefix}xxxxxx`;
+    ? `${displayBaseUrl}/${prefix}${customSlug}`
+    : `${displayBaseUrl}/${prefix}xxxxxx`;
 
   const generateRandomSlug = () => {
     const chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -253,16 +261,16 @@ export default function CreateLinkModal({ onClose, onCreated, baseUrl }: Props) 
                   className="px-3 py-3 text-sm outline-none cursor-pointer"
                   style={{ color: "var(--text-muted)", background: "var(--surface-2)", borderRight: "1px solid var(--border)" }}
                 >
-                  <option value="">{baseUrl.replace(/^https?:\/\//, "")}/</option>
-                  <option value="s/">{baseUrl.replace(/^https?:\/\//, "")}/s/</option>
-                  <option value="sh/">{baseUrl.replace(/^https?:\/\//, "")}/sh/</option>
-                  <option value="link/">{baseUrl.replace(/^https?:\/\//, "")}/link/</option>
-                  <option value="LinkFlare/">{baseUrl.replace(/^https?:\/\//, "")}/LinkFlare/</option>
-                  <option value="go/">{baseUrl.replace(/^https?:\/\//, "")}/go/</option>
-                  <option value="to/">{baseUrl.replace(/^https?:\/\//, "")}/to/</option>
-                  <option value="visit/">{baseUrl.replace(/^https?:\/\//, "")}/visit/</option>
-                  <option value="get/">{baseUrl.replace(/^https?:\/\//, "")}/get/</option>
-                  <option value="click/">{baseUrl.replace(/^https?:\/\//, "")}/click/</option>
+                  <option value="">{displayBaseUrl.replace(/^https?:\/\//, "")}/</option>
+                  <option value="s/">{displayBaseUrl.replace(/^https?:\/\//, "")}/s/</option>
+                  <option value="sh/">{displayBaseUrl.replace(/^https?:\/\//, "")}/sh/</option>
+                  <option value="link/">{displayBaseUrl.replace(/^https?:\/\//, "")}/link/</option>
+                  <option value="LinkFlare/">{displayBaseUrl.replace(/^https?:\/\//, "")}/LinkFlare/</option>
+                  <option value="go/">{displayBaseUrl.replace(/^https?:\/\//, "")}/go/</option>
+                  <option value="to/">{displayBaseUrl.replace(/^https?:\/\//, "")}/to/</option>
+                  <option value="visit/">{displayBaseUrl.replace(/^https?:\/\//, "")}/visit/</option>
+                  <option value="get/">{displayBaseUrl.replace(/^https?:\/\//, "")}/get/</option>
+                  <option value="click/">{displayBaseUrl.replace(/^https?:\/\//, "")}/click/</option>
                 </select>
                 <div className="relative flex-1">
                   <input
