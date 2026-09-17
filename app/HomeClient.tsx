@@ -9,6 +9,7 @@ import {
   Sparkles, TrendingUp, Users, Link2, Wand2, Calendar, Hash, Eye, EyeOff, Download
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
+import BuyMeCoffee from "@/components/BuyMeCoffee";
 
 const FEATURES = [
   {
@@ -398,6 +399,9 @@ export default function HomeClient() {
                   <BarChart2 size={15} />
                   Want real-time analytics for this link? <Link href="/signup" className="font-semibold hover:underline" style={{ color: "var(--accent)" }}>Create a free account</Link>
                 </div>
+
+                {/* Buy Me a Coffee Support Card */}
+                <BuyMeCoffee variant="card" className="mt-4" />
               </div>
             )}
           </form>
@@ -553,13 +557,17 @@ export default function HomeClient() {
               </div>
               <span className="font-bold font-display gradient-text">LinkFlare</span>
             </div>
-            <div className="flex items-center gap-4 text-sm">
+            <div className="flex flex-wrap items-center gap-4 text-sm">
               <Link href="/login" style={{ color: "var(--text-muted)" }} className="hover:text-[var(--accent)] transition-colors">Login</Link>
               <Link href="/signup" style={{ color: "var(--text-muted)" }} className="hover:text-[var(--accent)] transition-colors">Sign Up</Link>
               <Link href="/dashboard" style={{ color: "var(--text-muted)" }} className="hover:text-[var(--accent)] transition-colors">Dashboard</Link>
+              <BuyMeCoffee variant="compact" />
             </div>
           </div>
-          <p>Developed by <a href="https://lakshan.vercel.app/" target="_blank" rel="noopener noreferrer">V.P.R. Lakshan Vidanapathirana</a></p>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs" style={{ color: "var(--text-muted)" }}>
+            <p>Developed by <a href="https://lakshan.vercel.app/" target="_blank" rel="noopener noreferrer" className="hover:underline font-medium" style={{ color: "var(--text)" }}>V.P.R. Lakshan Vidanapathirana</a></p>
+            <p>100% Free & Open Service</p>
+          </div>
         </div>
       </footer>
     </div>

@@ -7,6 +7,7 @@ import { useTheme } from "./ThemeProvider";
 import {
   Zap, Moon, Sun, Menu, X, LayoutDashboard, LogOut, LogIn, UserPlus, BarChart2,
 } from "lucide-react";
+import BuyMeCoffee from "./BuyMeCoffee";
 
 interface User {
   name: string;
@@ -78,6 +79,9 @@ export default function Navbar() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
+            {/* Buy Me a Coffee */}
+            <BuyMeCoffee variant="compact" className="hidden lg:inline-flex" />
+
             {/* Theme Toggle */}
             <button
               onClick={toggle}
@@ -161,6 +165,9 @@ export default function Navbar() {
                 </Link>
               </>
             )}
+            <div className="pt-2">
+              <BuyMeCoffee variant="compact" className="w-full justify-center" />
+            </div>
           </div>
         </div>
       )}

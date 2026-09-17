@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Link2, Wand2, Calendar, Hash, Lock, Eye, EyeOff, Copy, Check, AlertCircle, CheckCircle2, Loader2, Clock } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
+import BuyMeCoffee from "./BuyMeCoffee";
 
 interface LinkData {
   slug: string;
@@ -193,6 +194,9 @@ export default function CreateLinkModal({ onClose, onCreated, baseUrl }: Props) 
                 Download QR Code
               </button>
             </div>
+
+            {/* Buy Me a Coffee Support Card */}
+            <BuyMeCoffee variant="card" />
 
             <button onClick={onClose} className="btn-primary w-full" id="done-btn">Done</button>
           </div>
