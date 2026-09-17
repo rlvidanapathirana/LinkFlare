@@ -103,7 +103,26 @@ export function formatNumber(n: number): string {
 }
 
 // Build the short URL from a slug
-export function buildShortUrl(slug: string): string {
-  const base = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  return `${base}/${slug}`;
+export function buildShortUrl(slug: string, request?: NextRequest | Request): string {
+  // 1. If request is provided, extract dynamic host from headers (e.g. Netlify, Vercel, custom domain)
+  if (request) {
+    const proto = request.headers.get("x-forwarded-proto") || "https";
+    const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
+    if (host && !host.includes("localhost")) {
+      return `https://${host}/${slug}`;
+    }
+  }
+
+  // 2. Check NEXT_PUBLIC_BASE_URL environment variable
+  if (process.env.NEXT_PUBLIC_BASE_URL && !process.env.NEXT_PUBLIC_BASE_URL.includes("localhost")) {
+    return `${process.env.NEXT_PUBLIC_BASE_URL.replace(/\/$/, "")}/${slug}`;
+  }
+
+  // 3. If in browser
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/${slug}`;
+  }
+
+  // 4. Fallback default
+  return `https://shturl.netlify.app/${slug}`;
 }

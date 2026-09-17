@@ -50,7 +50,8 @@ export default function AnalyticsClient({ slug, baseUrl }: Props) {
   const [link, setLink] = useState<LinkData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const shortUrl = `${baseUrl}/${slug}`;
+  const liveOrigin = typeof window !== "undefined" ? window.location.origin : (baseUrl && !baseUrl.includes("localhost") ? baseUrl : "https://shturl.netlify.app");
+  const shortUrl = `${liveOrigin}/${slug}`;
 
   useEffect(() => {
     fetch(`/api/links/${slug}/analytics`)

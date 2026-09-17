@@ -87,7 +87,13 @@ export default function HomeClient() {
   const slugTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const inputRef = useRef<HTMLInputElement>(null);
   
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+  const [baseUrl, setBaseUrl] = useState("shturl.netlify.app");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setBaseUrl(window.location.origin);
+    }
+  }, []);
 
   useEffect(() => {
     if (!customSlug || customSlug.length < 3) {
@@ -144,7 +150,10 @@ export default function HomeClient() {
       if (!res.ok) {
         setError(data.error || "Failed to shorten URL");
       } else {
-        setResult({ shortUrl: data.shortUrl, slug: data.slug });
+        // Ensure live origin is always used instead of localhost
+        const liveOrigin = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_BASE_URL || "https://shturl.netlify.app");
+        const resolvedShortUrl = data.shortUrl && !data.shortUrl.includes("localhost") ? data.shortUrl : `${liveOrigin}/${data.slug}`;
+        setResult({ shortUrl: resolvedShortUrl, slug: data.slug });
       }
     } catch {
       setError("Something went wrong. Please try again.");
@@ -250,48 +259,56 @@ export default function HomeClient() {
 
             {/* Advanced Options Panel */}
             {showAdvanced && (
-              <div className="mt-6 p-6 rounded-2xl text-left bg-white/5 backdrop-blur-md border animate-scale-in" style={{ borderColor: "var(--glass-border)" }}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Alias */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-sm font-medium" style={{ color: "var(--text)" }}>Short Link Alias</label>
-                      <button type="button" onClick={generateRandomSlug} className="text-xs flex items-center gap-1 hover:opacity-80 transition-opacity" style={{ color: "var(--accent)" }}>
-                        <Wand2 size={12} /> Auto-generate Random
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-0 rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)", background: "var(--surface)" }}>
-                      <select
-                        value={prefix}
-                        onChange={(e) => setPrefix(e.target.value)}
-                        className="px-3 py-3 text-sm outline-none cursor-pointer"
-                        style={{ color: "var(--text-muted)", background: "var(--surface-2)", borderRight: "1px solid var(--border)" }}
-                      >
-                        <option value="">{baseUrl.replace(/^https?:\/\//, "")}/</option>
-                        <option value="s/">{baseUrl.replace(/^https?:\/\//, "")}/s/</option>
-                        <option value="sh/">{baseUrl.replace(/^https?:\/\//, "")}/sh/</option>
-                        <option value="link/">{baseUrl.replace(/^https?:\/\//, "")}/link/</option>
-                        <option value="LinkFlare/">{baseUrl.replace(/^https?:\/\//, "")}/LinkFlare/</option>
-                        <option value="go/">{baseUrl.replace(/^https?:\/\//, "")}/go/</option>
-                        <option value="to/">{baseUrl.replace(/^https?:\/\//, "")}/to/</option>
-                        <option value="visit/">{baseUrl.replace(/^https?:\/\//, "")}/visit/</option>
-                        <option value="get/">{baseUrl.replace(/^https?:\/\//, "")}/get/</option>
-                        <option value="click/">{baseUrl.replace(/^https?:\/\//, "")}/click/</option>
-                      </select>
-                      <input
-                        type="text"
-                        placeholder="my-awesome-link"
-                        value={customSlug}
-                        onChange={(e) => setCustomSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
-                        className="w-full px-3 py-3 text-sm bg-transparent outline-none"
-                        style={{ color: "var(--text)" }}
-                        maxLength={32}
-                      />
-                    </div>
-                    {slugStatus === "taken" && <p className="text-xs mt-1" style={{ color: "var(--error)" }}>This alias is already taken</p>}
-                    {slugStatus === "available" && <p className="text-xs mt-1" style={{ color: "var(--success)" }}>This alias is available!</p>}
+              <div className="mt-6 p-6 rounded-2xl text-left bg-white/5 backdrop-blur-md border animate-scale-in space-y-6" style={{ borderColor: "var(--glass-border)" }}>
+                {/* 1. Short Link Alias (Full Width with plenty of room to type) */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-semibold" style={{ color: "var(--text)" }}>
+                      Short Link Alias
+                    </label>
+                    <button 
+                      type="button" 
+                      onClick={generateRandomSlug} 
+                      className="text-xs flex items-center gap-1 font-medium hover:opacity-80 transition-opacity" 
+                      style={{ color: "var(--accent)" }}
+                    >
+                      <Wand2 size={13} /> Auto-generate Random
+                    </button>
                   </div>
+                  <div className="flex items-stretch rounded-xl overflow-hidden shadow-sm" style={{ border: "1px solid var(--border)", background: "var(--surface)" }}>
+                    <select
+                      value={prefix}
+                      onChange={(e) => setPrefix(e.target.value)}
+                      className="px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium outline-none cursor-pointer shrink-0 max-w-[45%] sm:max-w-none truncate"
+                      style={{ color: "var(--text-muted)", background: "var(--surface-2)", borderRight: "1px solid var(--border)" }}
+                    >
+                      <option value="">{baseUrl.replace(/^https?:\/\//, "")}/</option>
+                      <option value="s/">{baseUrl.replace(/^https?:\/\//, "")}/s/</option>
+                      <option value="sh/">{baseUrl.replace(/^https?:\/\//, "")}/sh/</option>
+                      <option value="link/">{baseUrl.replace(/^https?:\/\//, "")}/link/</option>
+                      <option value="LinkFlare/">{baseUrl.replace(/^https?:\/\//, "")}/LinkFlare/</option>
+                      <option value="go/">{baseUrl.replace(/^https?:\/\//, "")}/go/</option>
+                      <option value="to/">{baseUrl.replace(/^https?:\/\//, "")}/to/</option>
+                      <option value="visit/">{baseUrl.replace(/^https?:\/\//, "")}/visit/</option>
+                      <option value="get/">{baseUrl.replace(/^https?:\/\//, "")}/get/</option>
+                      <option value="click/">{baseUrl.replace(/^https?:\/\//, "")}/click/</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="my-custom-link"
+                      value={customSlug}
+                      onChange={(e) => setCustomSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
+                      className="w-full flex-1 px-3.5 py-3 text-sm sm:text-base font-mono bg-transparent outline-none min-w-0"
+                      style={{ color: "var(--text)" }}
+                      maxLength={32}
+                    />
+                  </div>
+                  {slugStatus === "taken" && <p className="text-xs mt-1.5 font-medium flex items-center gap-1" style={{ color: "var(--error)" }}>❌ This alias is already taken</p>}
+                  {slugStatus === "available" && <p className="text-xs mt-1.5 font-medium flex items-center gap-1" style={{ color: "var(--success)" }}>✅ This alias is available!</p>}
+                </div>
 
+                {/* 2. Link Expiration & Password in 2 Columns underneath */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
                   {/* Expiration */}
                   <div>
                     <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--text)" }}>Link Expiration <span style={{ color: "var(--text-muted)" }}>(optional)</span></label>
@@ -301,7 +318,7 @@ export default function HomeClient() {
                           key={mode}
                           type="button"
                           onClick={() => setExpireMode(mode)}
-                          className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-lg transition-colors border ${
+                          className={`flex-1 py-2 px-2 text-xs font-medium rounded-lg transition-colors border ${
                             expireMode === mode ? "bg-opacity-10" : "bg-transparent hover:bg-opacity-5"
                           }`}
                           style={{
@@ -317,13 +334,13 @@ export default function HomeClient() {
                       ))}
                     </div>
                     {expireMode === "date" && (
-                      <div className="relative">
+                      <div className="relative mt-2">
                         <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
                         <input type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className="input-field pl-9 py-2 text-sm" required min={new Date().toISOString().slice(0, 16)} />
                       </div>
                     )}
                     {expireMode === "clicks" && (
-                      <div className="relative">
+                      <div className="relative mt-2">
                         <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
                         <input type="number" placeholder="Number of clicks" value={clickLimit} onChange={(e) => setClickLimit(e.target.value)} className="input-field pl-9 py-2 text-sm" required min="1" max="1000000" />
                       </div>

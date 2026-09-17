@@ -103,7 +103,9 @@ export default function CreateLinkModal({ onClose, onCreated, baseUrl }: Props) 
       const data = await res.json();
       if (!res.ok) return setError(data.error || "Failed to create link");
 
-      setCreated({ slug: data.slug, shortUrl: data.shortUrl });
+      const liveOrigin = typeof window !== "undefined" ? window.location.origin : (baseUrl && !baseUrl.includes("localhost") ? baseUrl : "https://shturl.netlify.app");
+      const resolvedShortUrl = data.shortUrl && !data.shortUrl.includes("localhost") ? data.shortUrl : `${liveOrigin}/${data.slug}`;
+      setCreated({ slug: data.slug, shortUrl: resolvedShortUrl });
       onCreated(data.link);
     } catch {
       setError("Something went wrong. Please try again.");

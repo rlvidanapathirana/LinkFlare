@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     await setLink(slug, linkData);
 
-    const shortUrl = buildShortUrl(slug);
+    const shortUrl = buildShortUrl(slug, request);
     return NextResponse.json({ success: true, slug, shortUrl, link: linkData }, { status: 201 });
   } catch (error) {
     console.error("Create link error:", error);

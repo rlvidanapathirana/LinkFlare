@@ -29,7 +29,8 @@ export default function LinkCard({ link, baseUrl, onDeleted, onUpdated }: Props)
   const [showQR, setShowQR] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
 
-  const shortUrl = `${baseUrl}/${link.slug}`;
+  const liveOrigin = typeof window !== "undefined" ? window.location.origin : (baseUrl && !baseUrl.includes("localhost") ? baseUrl : "https://shturl.netlify.app");
+  const shortUrl = `${liveOrigin}/${link.slug}`;
   const isExpired = link.expiresAt ? new Date(link.expiresAt) < new Date() : false;
   const isLimitReached = link.clickLimit !== null && link.clicks >= link.clickLimit;
   const isActive = !isExpired && !isLimitReached;
