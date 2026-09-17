@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import {
   Zap, BarChart2, QrCode, Lock, Clock, Infinity, ArrowRight,
   CheckCircle, Copy, Check, ExternalLink, Globe, Shield,
-  Sparkles, TrendingUp, Users, Link2,
+  Sparkles, TrendingUp, Users, Link2, Wand2, Calendar, Hash, Eye, EyeOff, Download
 } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 
 const FEATURES = [
   {
@@ -65,7 +66,54 @@ export default function HomeClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  
+  const [customSlug, setCustomSlug] = useState(() => {
+    const chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let result = "";
+    for (let i = 0; i < 6; i++) {
+      result += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return result;
+  });
+  const [prefix, setPrefix] = useState("");
+  const [expireMode, setExpireMode] = useState<"none" | "date" | "clicks">("none");
+  const [expiresAt, setExpiresAt] = useState("");
+  const [clickLimit, setClickLimit] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const slugTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+
+  useEffect(() => {
+    if (!customSlug || customSlug.length < 3) {
+      setSlugStatus("idle");
+      return;
+    }
+    setSlugStatus("checking");
+    clearTimeout(slugTimer.current);
+    slugTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/links/check-slug?slug=${encodeURIComponent(prefix + customSlug)}`);
+        const data = await res.json();
+        setSlugStatus(data.available ? "available" : "taken");
+      } catch {
+        setSlugStatus("idle");
+      }
+    }, 500);
+  }, [customSlug, prefix]);
+
+  const generateRandomSlug = () => {
+    const chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let result = "";
+    for (let i = 0; i < 6; i++) {
+      result += chars[Math.floor(Math.random() * chars.length)];
+    }
+    setCustomSlug(result);
+  };
 
   const handleShorten = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,20 +121,23 @@ export default function HomeClient() {
     setError("");
     setLoading(true);
     setResult(null);
-
-    // For non-logged-in users, redirect to signup
-    const stored = localStorage.getItem("lf_user");
-    if (!stored) {
-      localStorage.setItem("lf_pending_url", url);
-      window.location.href = "/signup";
+    if (slugStatus === "taken") {
+      setError("This alias is already taken");
+      setLoading(false);
       return;
     }
 
     try {
+      const body: Record<string, unknown> = { longUrl: url, prefix };
+      if (customSlug) body.customSlug = customSlug;
+      if (expireMode === "date" && expiresAt) body.expiresAt = expiresAt;
+      if (expireMode === "clicks" && clickLimit) body.clickLimit = parseInt(clickLimit, 10);
+      if (password) body.password = password;
+
       const res = await fetch("/api/links", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ longUrl: url }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -106,6 +157,17 @@ export default function HomeClient() {
     navigator.clipboard.writeText(result.shortUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadQR = () => {
+    if (!result) return;
+    const canvas = document.getElementById(`qr-canvas-${result.slug}`) as HTMLCanvasElement;
+    if (!canvas) return;
+    const url = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `linkflare-qr-${result.slug}.png`;
+    a.click();
   };
 
   return (
@@ -172,36 +234,169 @@ export default function HomeClient() {
                 {loading ? "Shortening…" : <>Shorten It <ArrowRight size={18} /></>}
               </button>
             </div>
+            
+            {/* Advanced Toggle */}
+            <div className="mt-4 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="text-sm font-medium hover:underline flex items-center gap-2"
+                style={{ color: "var(--accent)" }}
+              >
+                {showAdvanced ? "Hide Advanced Options" : "Show Advanced Options"}
+              </button>
+            </div>
 
-            {error && (
-              <p className="text-sm mt-2 text-center animate-fade-in" style={{ color: "var(--error)" }}>
-                {error}
-              </p>
+            {/* Advanced Options Panel */}
+            {showAdvanced && (
+              <div className="mt-6 p-6 rounded-2xl text-left bg-white/5 backdrop-blur-md border animate-scale-in" style={{ borderColor: "var(--glass-border)" }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Alias */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-sm font-medium" style={{ color: "var(--text)" }}>Short Link Alias</label>
+                      <button type="button" onClick={generateRandomSlug} className="text-xs flex items-center gap-1 hover:opacity-80 transition-opacity" style={{ color: "var(--accent)" }}>
+                        <Wand2 size={12} /> Auto-generate Random
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-0 rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)", background: "var(--surface)" }}>
+                      <select
+                        value={prefix}
+                        onChange={(e) => setPrefix(e.target.value)}
+                        className="px-3 py-3 text-sm outline-none cursor-pointer"
+                        style={{ color: "var(--text-muted)", background: "var(--surface-2)", borderRight: "1px solid var(--border)" }}
+                      >
+                        <option value="">{baseUrl.replace(/^https?:\/\//, "")}/</option>
+                        <option value="s/">{baseUrl.replace(/^https?:\/\//, "")}/s/</option>
+                        <option value="sh/">{baseUrl.replace(/^https?:\/\//, "")}/sh/</option>
+                        <option value="link/">{baseUrl.replace(/^https?:\/\//, "")}/link/</option>
+                        <option value="LinkFlare/">{baseUrl.replace(/^https?:\/\//, "")}/LinkFlare/</option>
+                        <option value="go/">{baseUrl.replace(/^https?:\/\//, "")}/go/</option>
+                        <option value="to/">{baseUrl.replace(/^https?:\/\//, "")}/to/</option>
+                        <option value="visit/">{baseUrl.replace(/^https?:\/\//, "")}/visit/</option>
+                        <option value="get/">{baseUrl.replace(/^https?:\/\//, "")}/get/</option>
+                        <option value="click/">{baseUrl.replace(/^https?:\/\//, "")}/click/</option>
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="my-awesome-link"
+                        value={customSlug}
+                        onChange={(e) => setCustomSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
+                        className="w-full px-3 py-3 text-sm bg-transparent outline-none"
+                        style={{ color: "var(--text)" }}
+                        maxLength={32}
+                      />
+                    </div>
+                    {slugStatus === "taken" && <p className="text-xs mt-1" style={{ color: "var(--error)" }}>This alias is already taken</p>}
+                    {slugStatus === "available" && <p className="text-xs mt-1" style={{ color: "var(--success)" }}>This alias is available!</p>}
+                  </div>
+
+                  {/* Expiration */}
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--text)" }}>Link Expiration <span style={{ color: "var(--text-muted)" }}>(optional)</span></label>
+                    <div className="flex gap-2 mb-2">
+                      {(["none", "date", "clicks"] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setExpireMode(mode)}
+                          className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-lg transition-colors border ${
+                            expireMode === mode ? "bg-opacity-10" : "bg-transparent hover:bg-opacity-5"
+                          }`}
+                          style={{
+                            borderColor: expireMode === mode ? "var(--accent)" : "var(--border)",
+                            background: expireMode === mode ? "var(--accent-subtle)" : "transparent",
+                            color: expireMode === mode ? "var(--accent)" : "var(--text-secondary)",
+                          }}
+                        >
+                          {mode === "none" && "Never"}
+                          {mode === "date" && "By Date"}
+                          {mode === "clicks" && "By Clicks"}
+                        </button>
+                      ))}
+                    </div>
+                    {expireMode === "date" && (
+                      <div className="relative">
+                        <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
+                        <input type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className="input-field pl-9 py-2 text-sm" required min={new Date().toISOString().slice(0, 16)} />
+                      </div>
+                    )}
+                    {expireMode === "clicks" && (
+                      <div className="relative">
+                        <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
+                        <input type="number" placeholder="Number of clicks" value={clickLimit} onChange={(e) => setClickLimit(e.target.value)} className="input-field pl-9 py-2 text-sm" required min="1" max="1000000" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Password */}
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--text)" }}>Password Protection <span style={{ color: "var(--text-muted)" }}>(optional)</span></label>
+                    <div className="relative">
+                      <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
+                      <input type={showPassword ? "text" : "password"} placeholder="Enter a password" value={password} onChange={(e) => setPassword(e.target.value)} className="input-field pl-9 pr-9 py-2 text-sm" />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-opacity-10 transition-colors" style={{ color: "var(--text-muted)" }}>
+                        {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
 
-            {/* Result */}
+            {error && (
+              <div className="mt-4 p-3 rounded-xl text-sm animate-fade-in" style={{ background: "rgba(239,68,68,0.1)", color: "var(--error)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                {error}
+              </div>
+            )}
+
             {result && (
-              <div className="mt-3 flex items-center justify-between gap-3 p-3 rounded-xl animate-scale-in"
-                style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <CheckCircle size={16} className="text-emerald-500 flex-shrink-0" />
-                  <a
-                    href={result.shortUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-mono text-sm font-bold truncate hover:underline"
-                    style={{ color: "var(--accent)" }}
-                  >
-                    {result.shortUrl}
-                  </a>
+              <div className="mt-6 p-5 rounded-2xl animate-scale-in text-left" style={{ background: "var(--surface)", border: "1px solid var(--success)", boxShadow: "0 8px 30px rgba(16,185,129,0.15)" }}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center bg-green-100 text-green-600">
+                    <CheckCircle size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg" style={{ color: "var(--text)" }}>Link Shortened Successfully!</h3>
+                    <p className="text-sm" style={{ color: "var(--text-secondary)" }}>Your custom short link is ready.</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <button onClick={handleCopy} className="btn-ghost text-sm py-1.5 px-2" id="hero-copy-btn">
-                    {copied ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} />}
-                  </button>
-                  <a href={result.shortUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm py-1.5 px-2">
-                    <ExternalLink size={15} />
-                  </a>
+                <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 p-3 rounded-xl h-full" style={{ background: "var(--surface-2)" }}>
+                      <Globe size={18} style={{ color: "var(--accent)" }} />
+                      <a href={result.shortUrl} target="_blank" rel="noopener noreferrer" className="font-mono flex-1 truncate font-bold text-lg hover:underline" style={{ color: "var(--accent)" }}>
+                        {result.shortUrl.replace(/^https?:\/\//, "")}
+                      </a>
+                      <button type="button" onClick={handleCopy} className="btn-primary py-2 px-4 shadow-none shrink-0">
+                        {copied ? <Check size={16} /> : <Copy size={16} />}
+                        <span className="hidden sm:inline ml-1">{copied ? "Copied" : "Copy"}</span>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 p-3 rounded-xl shrink-0 border" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+                    <div className="bg-white p-1 rounded flex-shrink-0">
+                      <QRCodeCanvas
+                        id={`qr-canvas-${result.slug}`}
+                        value={result.shortUrl}
+                        size={40}
+                        bgColor="#ffffff"
+                        fgColor="#1e1b4b"
+                        level="M"
+                        includeMargin={false}
+                      />
+                    </div>
+                    <button type="button" onClick={handleDownloadQR} className="btn-secondary py-2 px-3 shadow-none text-sm h-full flex flex-col justify-center items-center">
+                      <Download size={14} className="mb-0.5" />
+                      <span className="text-xs font-semibold">Save QR</span>
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="text-sm flex items-center gap-2 px-2" style={{ color: "var(--text-secondary)" }}>
+                  <BarChart2 size={15} />
+                  Want real-time analytics for this link? <Link href="/signup" className="font-semibold hover:underline" style={{ color: "var(--accent)" }}>Create a free account</Link>
                 </div>
               </div>
             )}

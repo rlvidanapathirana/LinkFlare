@@ -87,7 +87,7 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--text)" }}>Full Name</label>
-              <div className="relative gradient-border">
+              <div className="relative">
                 <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
                 <input
                   type="text"
@@ -104,7 +104,7 @@ export default function SignupPage() {
 
             <div>
               <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--text)" }}>Email Address</label>
-              <div className="relative gradient-border">
+              <div className="relative">
                 <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
                 <input
                   type="email"
@@ -121,7 +121,7 @@ export default function SignupPage() {
 
             <div>
               <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--text)" }}>Password</label>
-              <div className="relative gradient-border">
+              <div className="relative">
                 <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
                 <input
                   type={showPassword ? "text" : "password"}
@@ -162,7 +162,7 @@ export default function SignupPage() {
 
             <div>
               <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--text)" }}>Confirm Password</label>
-              <div className="relative gradient-border">
+              <div className="relative">
                 <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
                 <input
                   type={showPassword ? "text" : "password"}

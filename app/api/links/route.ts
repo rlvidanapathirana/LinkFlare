@@ -28,22 +28,27 @@ export async function GET() {
 // POST: Create a new short link
 export async function POST(request: NextRequest) {
   const user = await getCurrentUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  // We allow anonymous link creation, so we don't return 401 here anymore.
 
   try {
     const body = await request.json();
-    const { longUrl, customSlug, expiresAt, clickLimit, password } = body;
+    const { longUrl, customSlug, prefix = "", expiresAt, clickLimit, password } = body;
 
     // Validate long URL
     if (!longUrl || !isValidUrl(longUrl)) {
       return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
     }
 
+    // Validate prefix
+    const allowedPrefixes = ["", "s/", "sh/", "link/", "LinkFlare/", "go/", "to/", "visit/", "get/", "click/"];
+    if (!allowedPrefixes.includes(prefix)) {
+      return NextResponse.json({ error: "Invalid prefix" }, { status: 400 });
+    }
+
     // Determine slug
     let slug = customSlug?.trim();
     if (slug) {
+      slug = `${prefix}${slug}`;
       if (!isValidSlug(slug)) {
         return NextResponse.json(
           { error: "Slug must be 3-32 chars: letters, numbers, dash, underscore only" },
@@ -61,7 +66,7 @@ export async function POST(request: NextRequest) {
       // Auto-generate unique slug
       let attempts = 0;
       do {
-        slug = generateSlug(6);
+        slug = `${prefix}${generateSlug(6)}`;
         attempts++;
       } while ((await getLink(slug)) && attempts < 10);
     }
@@ -79,7 +84,7 @@ export async function POST(request: NextRequest) {
     const linkData = {
       slug,
       longUrl,
-      userId: user.userId,
+      userId: user ? user.userId : null,
       createdAt: new Date().toISOString(),
       expiresAt: expiryDate,
       clickLimit: limit,

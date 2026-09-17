@@ -79,10 +79,10 @@ export default function LinkCard({ link, baseUrl, onDeleted, onUpdated }: Props)
               >
                 {shortUrl.replace(/^https?:\/\//, "")}
               </a>
-              <button onClick={handleCopy} className="btn-ghost w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity" id={`copy-${link.slug}`}>
+              <button onClick={handleCopy} className="btn-ghost w-6 h-6 p-0 opacity-60 hover:opacity-100 transition-opacity" id={`copy-${link.slug}`}>
                 {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
               </button>
-              <a href={shortUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              <a href={shortUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost w-6 h-6 p-0 opacity-60 hover:opacity-100 transition-opacity">
                 <ExternalLink size={13} />
               </a>
             </div>

@@ -33,8 +33,22 @@ export async function proxy(request: NextRequest) {
 
   // ─── 3. Handle Short URL redirection ─────────────────────────────────────
   const slug = pathname.slice(1);
-  if (!slug || slug.includes("/") || RESERVED_SLUGS.has(slug)) {
+  const allowedPrefixes = ["s/", "sh/", "link/", "LinkFlare/", "go/", "to/", "visit/", "get/", "click/"];
+  const hasAllowedPrefix = allowedPrefixes.some(p => slug.startsWith(p));
+
+  if (!slug || RESERVED_SLUGS.has(slug)) {
     return NextResponse.next();
+  }
+
+  // Block slugs with slashes unless it matches our allowed prefixes (and only one slash)
+  if (slug.includes("/")) {
+    if (!hasAllowedPrefix) {
+      return NextResponse.next();
+    }
+    const rest = slug.slice(slug.indexOf("/") + 1);
+    if (rest.includes("/")) {
+      return NextResponse.next();
+    }
   }
 
   const link = await getLink(slug);

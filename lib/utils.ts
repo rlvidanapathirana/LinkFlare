@@ -23,9 +23,9 @@ export function isValidUrl(url: string): boolean {
   }
 }
 
-// Validate custom slug (alphanumeric + dash + underscore)
+// Validate custom slug (alphanumeric + dash + underscore + allowed prefixes)
 export function isValidSlug(slug: string): boolean {
-  return /^[a-zA-Z0-9_-]{3,32}$/.test(slug);
+  return /^(s\/|sh\/|link\/|LinkFlare\/|go\/|to\/|visit\/|get\/|click\/)?[a-zA-Z0-9_-]{3,32}$/.test(slug);
 }
 
 // Reserved slugs that cannot be used as custom back-halves

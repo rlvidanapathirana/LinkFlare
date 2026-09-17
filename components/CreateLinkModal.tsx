@@ -24,7 +24,15 @@ type ExpireMode = "none" | "date" | "clicks";
 
 export default function CreateLinkModal({ onClose, onCreated, baseUrl }: Props) {
   const [longUrl, setLongUrl] = useState("");
-  const [customSlug, setCustomSlug] = useState("");
+  const [customSlug, setCustomSlug] = useState(() => {
+    const chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let result = "";
+    for (let i = 0; i < 6; i++) {
+      result += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return result;
+  });
+  const [prefix, setPrefix] = useState("");
   const [expireMode, setExpireMode] = useState<ExpireMode>("none");
   const [expiresAt, setExpiresAt] = useState("");
   const [clickLimit, setClickLimit] = useState("");
@@ -47,20 +55,29 @@ export default function CreateLinkModal({ onClose, onCreated, baseUrl }: Props) 
     clearTimeout(slugTimer.current);
     slugTimer.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/links/check-slug?slug=${encodeURIComponent(customSlug)}`);
+        const res = await fetch(`/api/links/check-slug?slug=${encodeURIComponent(prefix + customSlug)}`);
         const data = await res.json();
         setSlugStatus(data.available ? "available" : "taken");
       } catch {
         setSlugStatus("idle");
       }
     }, 500);
-  }, [customSlug]);
+  }, [customSlug, prefix]);
 
   const shortUrlPreview = created
     ? created.shortUrl
     : customSlug
-    ? `${baseUrl}/${customSlug}`
-    : `${baseUrl}/xxxxxx`;
+    ? `${baseUrl}/${prefix}${customSlug}`
+    : `${baseUrl}/${prefix}xxxxxx`;
+
+  const generateRandomSlug = () => {
+    const chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let result = "";
+    for (let i = 0; i < 6; i++) {
+      result += chars[Math.floor(Math.random() * chars.length)];
+    }
+    setCustomSlug(result);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +87,7 @@ export default function CreateLinkModal({ onClose, onCreated, baseUrl }: Props) 
 
     setLoading(true);
     try {
-      const body: Record<string, unknown> = { longUrl };
+      const body: Record<string, unknown> = { longUrl, prefix };
       if (customSlug) body.customSlug = customSlug;
       if (expireMode === "date" && expiresAt) body.expiresAt = expiresAt;
       if (expireMode === "clicks" && clickLimit) body.clickLimit = parseInt(clickLimit, 10);
@@ -210,13 +227,37 @@ export default function CreateLinkModal({ onClose, onCreated, baseUrl }: Props) 
 
             {/* Custom Alias */}
             <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--text)" }}>
-                Custom Alias <span style={{ color: "var(--text-muted)" }}>(optional)</span>
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-medium" style={{ color: "var(--text)" }}>
+                  Short Link Alias
+                </label>
+                <button 
+                  type="button" 
+                  onClick={generateRandomSlug}
+                  className="text-xs flex items-center gap-1 hover:opacity-80 transition-opacity" 
+                  style={{ color: "var(--accent)" }}
+                >
+                  <Wand2 size={12} /> Auto-generate Random
+                </button>
+              </div>
               <div className="flex items-center gap-0 rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)", background: "var(--surface)" }}>
-                <span className="px-3 py-3 text-sm" style={{ color: "var(--text-muted)", background: "var(--surface-2)", borderRight: "1px solid var(--border)", whiteSpace: "nowrap" }}>
-                  {baseUrl.replace(/^https?:\/\//, "")}/
-                </span>
+                <select
+                  value={prefix}
+                  onChange={(e) => setPrefix(e.target.value)}
+                  className="px-3 py-3 text-sm outline-none cursor-pointer"
+                  style={{ color: "var(--text-muted)", background: "var(--surface-2)", borderRight: "1px solid var(--border)" }}
+                >
+                  <option value="">{baseUrl.replace(/^https?:\/\//, "")}/</option>
+                  <option value="s/">{baseUrl.replace(/^https?:\/\//, "")}/s/</option>
+                  <option value="sh/">{baseUrl.replace(/^https?:\/\//, "")}/sh/</option>
+                  <option value="link/">{baseUrl.replace(/^https?:\/\//, "")}/link/</option>
+                  <option value="LinkFlare/">{baseUrl.replace(/^https?:\/\//, "")}/LinkFlare/</option>
+                  <option value="go/">{baseUrl.replace(/^https?:\/\//, "")}/go/</option>
+                  <option value="to/">{baseUrl.replace(/^https?:\/\//, "")}/to/</option>
+                  <option value="visit/">{baseUrl.replace(/^https?:\/\//, "")}/visit/</option>
+                  <option value="get/">{baseUrl.replace(/^https?:\/\//, "")}/get/</option>
+                  <option value="click/">{baseUrl.replace(/^https?:\/\//, "")}/click/</option>
+                </select>
                 <div className="relative flex-1">
                   <input
                     type="text"
