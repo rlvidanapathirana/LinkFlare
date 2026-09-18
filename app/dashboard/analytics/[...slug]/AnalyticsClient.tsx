@@ -54,7 +54,7 @@ export default function AnalyticsClient({ slug, baseUrl }: Props) {
   const shortUrl = `${liveOrigin}/${slug}`;
 
   useEffect(() => {
-    fetch(`/api/links/${slug}/analytics`)
+    fetch(`/api/links/analytics/${slug}`)
       .then((r) => r.json())
       .then((data) => {
         setAnalytics(data.analytics);

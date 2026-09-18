@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getClickEvents, getLink } from "@/lib/redis";
+import { getClickEvents, getLink, ClickEvent } from "@/lib/redis";
 import { getCurrentUser } from "@/lib/auth";
-import { ClickEvent } from "@/lib/redis";
 
 function groupByDay(events: ClickEvent[]): { date: string; clicks: number }[] {
   const map = new Map<string, number>();
@@ -31,15 +30,19 @@ function topN<T extends string>(arr: T[], n = 8): { name: string; value: number 
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ slug: string | string[] }> }
 ) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { slug } = await params;
+  const rawSlug = (await params).slug;
+  const slug = Array.isArray(rawSlug) ? rawSlug.join("/") : rawSlug;
+
   const link = await getLink(slug);
   if (!link) return NextResponse.json({ error: "Link not found" }, { status: 404 });
-  if (link.userId !== user.userId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (link.userId && link.userId !== user.userId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const events = await getClickEvents(slug, 1000);
 

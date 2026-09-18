@@ -75,10 +75,12 @@ export async function setLink(slug: string, data: LinkData): Promise<void> {
   }
 }
 
-export async function deleteLink(slug: string, userId: string): Promise<void> {
+export async function deleteLink(slug: string, userId?: string | null): Promise<void> {
   await redis.del(keys.link(slug));
   await redis.del(keys.clicks(slug));
-  await redis.srem(keys.userLinks(userId), slug);
+  if (userId) {
+    await redis.srem(keys.userLinks(userId), slug);
+  }
 }
 
 export async function incrementClicks(slug: string): Promise<void> {
@@ -110,7 +112,23 @@ export async function getUserLinks(userId: string): Promise<LinkData[]> {
   const links = await Promise.all(
     slugs.map((slug) => getLink(slug as string))
   );
-  return links.filter(Boolean) as LinkData[];
+
+  const validLinks: LinkData[] = [];
+  const staleSlugs: string[] = [];
+
+  slugs.forEach((slug, idx) => {
+    if (links[idx]) {
+      validLinks.push(links[idx]!);
+    } else {
+      staleSlugs.push(slug as string);
+    }
+  });
+
+  if (staleSlugs.length > 0) {
+    redis.srem(keys.userLinks(userId), ...staleSlugs).catch(() => {});
+  }
+
+  return validLinks;
 }
 
 // ─── User Helpers ──────────────────────────────────────────────────────────

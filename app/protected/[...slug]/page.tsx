@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Lock, Eye, EyeOff, AlertCircle, Loader2, Zap } from "lucide-react";
 import Link from "next/link";
 
-interface Props {
-  params: Promise<{ slug: string }>;
-}
-
-export default function ProtectedPage({ params }: { params: { slug: string } }) {
+export default function ProtectedPage() {
   const router = useRouter();
-  const { slug } = params;
+  const params = useParams();
+  const slug = Array.isArray(params?.slug)
+    ? params.slug.join("/")
+    : (params?.slug as string) || "";
+
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -22,20 +22,20 @@ export default function ProtectedPage({ params }: { params: { slug: string } }) 
     setError("");
     setLoading(true);
     try {
-      const res = await fetch(`/api/links/${slug}/verify-password`, {
+      const res = await fetch("/api/links/verify-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ slug, password }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || "Incorrect password");
       } else {
-        // Redirect to the original short link (middleware will now allow through)
+        // Redirect to the original short link (middleware / catch-all will now allow through)
         router.push(`/${slug}`);
       }
     } catch {
-      setError("Something went wrong");
+      setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -52,8 +52,10 @@ export default function ProtectedPage({ params }: { params: { slug: string } }) 
         </Link>
 
         <div className="glass-card p-8">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-            style={{ background: "rgba(245,158,11,0.1)", color: "#f59e0b" }}>
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ background: "rgba(245,158,11,0.1)", color: "#f59e0b" }}
+          >
             <Lock size={26} />
           </div>
           <h1 className="text-xl font-bold font-display mb-2" style={{ color: "var(--text)" }}>
@@ -64,15 +66,25 @@ export default function ProtectedPage({ params }: { params: { slug: string } }) 
           </p>
 
           {error && (
-            <div className="flex items-center gap-2 p-3 rounded-xl mb-4 text-sm"
-              style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "var(--error)" }}>
+            <div
+              className="flex items-center gap-2 p-3 rounded-xl mb-4 text-sm"
+              style={{
+                background: "rgba(239,68,68,0.1)",
+                border: "1px solid rgba(239,68,68,0.2)",
+                color: "var(--error)",
+              }}
+            >
               <AlertCircle size={14} /> {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
-              <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
+              <Lock
+                size={15}
+                className="absolute left-3 top-1/2 -translate-y-1/2"
+                style={{ color: "var(--text-muted)" }}
+              />
               <input
                 type={showPassword ? "text" : "password"}
                 id="protected-password"
@@ -91,8 +103,19 @@ export default function ProtectedPage({ params }: { params: { slug: string } }) 
                 {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
-            <button type="submit" disabled={loading} className="btn-primary w-full py-3" id="protected-submit-btn">
-              {loading ? <><Loader2 size={16} className="animate-spin" /> Verifying…</> : "Unlock Link"}
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full py-3"
+              id="protected-submit-btn"
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" /> Verifying…
+                </>
+              ) : (
+                "Unlock Link"
+              )}
             </button>
           </form>
         </div>
